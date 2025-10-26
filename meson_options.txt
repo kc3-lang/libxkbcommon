@@ -90,3 +90,9 @@ option(
     value: true,
     description: 'Enable installing bash completion scripts',
 )
+option(
+    'enable-tests',
+    type: 'boolean',
+    value: true,
+    description: 'Enable building tests',
+)

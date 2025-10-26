@@ -761,49 +761,53 @@ configure_file(input: 'test/xkeyboard-config-test.py.in',
                configuration: xkct_config)
 
 # Tests
-test_env = environment()
-test_env.set('XKB_LOG_LEVEL', 'debug')
-test_env.set('XKB_LOG_VERBOSITY', '10')
-test_env.set('top_srcdir', meson.current_source_dir())
-test_env.set('top_builddir', meson.current_build_dir())
-test_env.set('HAVE_XKBCLI_INTERACTIVE_EVDEV', configh_data.get('HAVE_XKBCLI_INTERACTIVE_EVDEV', 0).to_string())
-test_env.set('HAVE_XKBCLI_INTERACTIVE_WAYLAND', configh_data.get('HAVE_XKBCLI_INTERACTIVE_WAYLAND', 0).to_string())
-test_env.set('HAVE_XKBCLI_INTERACTIVE_X11', configh_data.get('HAVE_XKBCLI_INTERACTIVE_X11', 0).to_string())
-test_env.set('HAVE_XKBCLI_LIST', configh_data.get('HAVE_XKBCLI_LIST', 0).to_string())
+if get_option('enable-tests')
+    test_env = environment()
+    test_env.set('XKB_LOG_LEVEL', 'debug')
+    test_env.set('XKB_LOG_VERBOSITY', '10')
+    test_env.set('top_srcdir', meson.current_source_dir())
+    test_env.set('top_builddir', meson.current_build_dir())
+    test_env.set('HAVE_XKBCLI_INTERACTIVE_EVDEV', configh_data.get('HAVE_XKBCLI_INTERACTIVE_EVDEV', 0).to_string())
+    test_env.set('HAVE_XKBCLI_INTERACTIVE_WAYLAND', configh_data.get('HAVE_XKBCLI_INTERACTIVE_WAYLAND', 0).to_string())
+    test_env.set('HAVE_XKBCLI_INTERACTIVE_X11', configh_data.get('HAVE_XKBCLI_INTERACTIVE_X11', 0).to_string())
+    test_env.set('HAVE_XKBCLI_LIST', configh_data.get('HAVE_XKBCLI_LIST', 0).to_string())
 
-test_configh_data = configuration_data()
-test_configh_data.set_quoted('TEST_XKB_CONFIG_ROOT', meson.current_source_dir()/'test'/'data')
-configure_file(output: 'test-config.h', configuration: test_configh_data)
+    test_configh_data = configuration_data()
+    test_configh_data.set_quoted('TEST_XKB_CONFIG_ROOT', meson.current_source_dir()/'test'/'data')
+    configure_file(output: 'test-config.h', configuration: test_configh_data)
 
-m_dep = cc.find_library('m', required : false)
-# Some tests need to use unexported symbols, so we link them against
-# an internal copy of libxkbcommon with all symbols exposed.
-libxkbcommon_test_internal = library(
-    'xkbcommon-test-internal',
-    libxkbcommon_sources,
-    'src/xkbcomp/keymap-file-iterator.c',
-    'src/xkbcomp/keymap-file-iterator.h',
-    include_directories: include_directories('src', 'include'),
-    c_args: ['-DENABLE_PRIVATE_APIS'],
-    gnu_symbol_visibility: 'hidden',
-)
-test_dep = declare_dependency(
-    sources: [
-        'bench/bench.c',
-        'bench/bench.h',
-        'src/utils-numbers.h',
-        'src/utf8-decoding.c',
-        'src/utf8-decoding.h',
-        'test/common.c',
-        'test/evdev-scancodes.h',
-        'test/test.h',
-        'tools/tools-common.c',
-        'tools/tools-common.h',
-    ],
-    include_directories: include_directories('src', 'include'),
-    link_with: libxkbcommon_test_internal,
-    dependencies: [m_dep],
-)
+    m_dep = cc.find_library('m', required : false)
+    # Some tests need to use unexported symbols, so we link them against
+    # an internal copy of libxkbcommon with all symbols exposed.
+    libxkbcommon_test_internal = library(
+        'xkbcommon-test-internal',
+        libxkbcommon_sources,
+        'src/xkbcomp/keymap-file-iterator.c',
+        'src/xkbcomp/keymap-file-iterator.h',
+        include_directories: include_directories('src', 'include'),
+        c_args: ['-DENABLE_PRIVATE_APIS'],
+        gnu_symbol_visibility: 'hidden',
+    )
+    test_dep = declare_dependency(
+        sources: [
+            'bench/bench.c',
+            'bench/bench.h',
+            'src/utils-numbers.h',
+            'src/utf8-decoding.c',
+            'src/utf8-decoding.h',
+            'test/common.c',
+            'test/evdev-scancodes.h',
+            'test/test.h',
+            'tools/tools-common.c',
+            'tools/tools-common.h',
+        ],
+        include_directories: include_directories('src', 'include'),
+        link_with: libxkbcommon_test_internal,
+        dependencies: [m_dep],
+    )
+else
+    test_dep = declare_dependency()
+endif
 
 if build_tools
     # Tool: introspection
@@ -863,13 +867,14 @@ if get_option('enable-x11')
     )
 endif
 # TODO: version range?
-keysyms_test_dep = [test_dep]
-keysyms_test_c_args = ['-DENABLE_PRIVATE_APIS']
-if icu_dep.found()
-    keysyms_test_dep += [icu_dep]
-    configh_data.set10('HAVE_ICU', true)
-endif
-test(
+if get_option('enable-tests')
+    keysyms_test_dep = [test_dep]
+    keysyms_test_c_args = ['-DENABLE_PRIVATE_APIS']
+    if icu_dep.found()
+        keysyms_test_dep += [icu_dep]
+        configh_data.set10('HAVE_ICU', true)
+    endif
+    test(
     'keysym',
     executable('test-keysym', 'test/keysym.c', 'test/keysym.h',
                dependencies: keysyms_test_dep,
@@ -1262,6 +1267,7 @@ if get_option('enable-x11')
       env: bench_env,
   )
 endif
+endif  # enable-tests
 
 
 # Documentation.
