@@ -10,7 +10,11 @@ project(
 )
 
 xkbcommon_project_version = meson.project_version().split('.')
-if xkbcommon_project_version[0] != '1'
+# For Android, use unversioned SONAME
+is_android = host_machine.system() == 'android' or cc.get_id().contains('android') or cc.get_define('__ANDROID__') != ''
+if is_android
+    soname_version = ''
+elif xkbcommon_project_version[0] != '1'
     # The versioning used for the shared libraries assumes that the major
     # version of xkbcommon as a whole will increase to 2 if and only if there
     # is an ABI break, at which point we should probably bump the SONAME of
@@ -330,16 +334,21 @@ elif cc.get_argument_syntax() == 'msvc'
     libxkbcommon_link_deps += libxkbcommon_def
     libxkbcommon_link_args += '/DEF:' + libxkbcommon_def.full_path()
 endif
+libxkbcommon_kwargs = {
+    'link_args': libxkbcommon_link_args,
+    'link_depends': libxkbcommon_link_deps,
+    'gnu_symbol_visibility': 'hidden',
+    'install': true,
+    'include_directories': include_directories('src', 'include'),
+}
+if soname_version != ''
+    libxkbcommon_kwargs += {'version': soname_version}
+endif
 libxkbcommon = library(
     'xkbcommon',
     'include/xkbcommon/xkbcommon.h',
     libxkbcommon_sources,
-    link_args: libxkbcommon_link_args,
-    link_depends: libxkbcommon_link_deps,
-    gnu_symbol_visibility: 'hidden',
-    version: soname_version,
-    install: true,
-    include_directories: include_directories('src', 'include'),
+    kwargs: libxkbcommon_kwargs,
 )
 install_headers(
     'include/xkbcommon/xkbcommon.h',
@@ -399,21 +408,23 @@ You can disable X11 support with -Denable-x11=false.''')
         libxkbcommon_x11_link_deps += libxkbcommon_x11_def
         libxkbcommon_x11_link_args += '/DEF:' + libxkbcommon_x11_def.full_path()
     endif
+    libxkbcommon_x11_kwargs = {
+        'link_args': libxkbcommon_x11_link_args,
+        'link_depends': libxkbcommon_x11_link_deps,
+        'gnu_symbol_visibility': 'hidden',
+        'install': true,
+        'include_directories': include_directories('src', 'include'),
+        'link_with': libxkbcommon,
+        'dependencies': [xcb_dep, xcb_xkb_dep],
+    }
+    if soname_version != ''
+        libxkbcommon_x11_kwargs += {'version': soname_version}
+    endif
     libxkbcommon_x11 = library(
         'xkbcommon-x11',
         'include/xkbcommon/xkbcommon-x11.h',
         libxkbcommon_x11_sources,
-        link_args: libxkbcommon_x11_link_args,
-        link_depends: libxkbcommon_x11_link_deps,
-        gnu_symbol_visibility: 'hidden',
-        version: soname_version,
-        install: true,
-        include_directories: include_directories('src', 'include'),
-        link_with: libxkbcommon,
-        dependencies: [
-            xcb_dep,
-            xcb_xkb_dep,
-        ],
+        kwargs: libxkbcommon_x11_kwargs,
     )
     install_headers(
         'include/xkbcommon/xkbcommon-x11.h',
@@ -478,17 +489,22 @@ if get_option('enable-xkbregistry')
         libxkbregistry_link_deps += libxkbregistry_def
         libxkbregistry_link_args += '/DEF:' + libxkbregistry_def.full_path()
     endif
+    libxkbregistry_kwargs = {
+        'link_args': libxkbregistry_link_args,
+        'link_depends': libxkbregistry_link_deps,
+        'gnu_symbol_visibility': 'hidden',
+        'dependencies': deps_libxkbregistry,
+        'install': true,
+        'include_directories': include_directories('src', 'include'),
+    }
+    if soname_version != ''
+        libxkbregistry_kwargs += {'version': soname_version}
+    endif
     libxkbregistry = library(
         'xkbregistry',
         'include/xkbcommon/xkbregistry.h',
         libxkbregistry_sources,
-        link_args: libxkbregistry_link_args,
-        link_depends: libxkbregistry_link_deps,
-        gnu_symbol_visibility: 'hidden',
-        dependencies: deps_libxkbregistry,
-        version: soname_version,
-        install: true,
-        include_directories: include_directories('src', 'include'),
+        kwargs: libxkbregistry_kwargs,
     )
     install_headers(
         'include/xkbcommon/xkbregistry.h',
