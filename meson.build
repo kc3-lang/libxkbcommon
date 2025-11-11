@@ -10,6 +10,10 @@ project(
 )
 
 xkbcommon_project_version = meson.project_version().split('.')
+
+pkgconfig = import('pkgconfig')
+cc = meson.get_compiler('c')
+
 # For Android, use unversioned SONAME
 is_android = host_machine.system() == 'android' or cc.get_id().contains('android') or cc.get_define('__ANDROID__') != ''
 if is_android
@@ -27,9 +31,6 @@ else
         ['0', xkbcommon_project_version[1], xkbcommon_project_version[2]]
     )
 endif
-
-pkgconfig = import('pkgconfig')
-cc = meson.get_compiler('c')
 
 dir_libexec = get_option('prefix')/get_option('libexecdir')/'xkbcommon'
 
